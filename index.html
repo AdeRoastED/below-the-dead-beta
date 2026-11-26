@@ -1270,13 +1270,14 @@ const TF_EL = { roll: 'bRoll', spc: 'bSpc', ult: 'bUlt', swap: 'bSwap', bud: 'bB
 function tutFocus(k) {
   if (G.state !== 'play') return; const d = $('tutDim'); G.tutWait = { k, t: performance.now() }; G.state = 'tutwait'; resetInput(); document.body.classList.add('tutOn');
   const id = TF_EL[k], el = id && $(id); let mask = '';
+  if (el && el.classList.contains('hidden')) el.classList.remove('hidden'); // v69 fix: the 'call a friend' button was still hidden when its lesson froze the game, so nothing could be pressed
   if (el && isTouch) { $('touch').classList.remove('hidden'); mask = tutHole(el); el.classList.add('tutPulse'); G.tutWait.el = el; G.tutWait.hole = 1; } // v65: the buttons are shown first and the lit hole follows the button (it could end up in the wrong place: everything grey, ultimate included)
   else if (el) { el.classList.add('tutPulse'); G.tutWait.el = el; } // v64: with a mouse, clicking the lit button works too (only its key did)
   else if ((k === 'move' || k === 'aim' || k === 'hold') && isTouch) { const leftSide = (k === 'move') !== !!Cfg.lefty; G.tutWait.side = leftSide ? 'L' : 'R'; mask = `linear-gradient(to ${leftSide ? 'right' : 'left'}, transparent 48%, #000 52%)`; }
   d.style.webkitMaskImage = d.style.maskImage = mask || 'none'; d.classList.remove('hidden');
 }
 function tutHole(el) { const b = el.getBoundingClientRect(); if (!b.width) return ''; const r = Math.max(b.width, b.height) * 0.7 + 8; return `radial-gradient(circle at ${b.left + b.width / 2}px ${b.top + b.height / 2}px, transparent ${r}px, #000 ${r + 2}px)`; }
-function tutHoleTick() { const W = G.tutWait; if (!W || !W.hole || !W.el) return; const m = tutHole(W.el) || 'none', d = $('tutDim'); if (m !== W.m) { W.m = m; d.style.webkitMaskImage = d.style.maskImage = m; } }
+function tutHoleTick() { const W = G.tutWait; if (!W || !W.hole || !W.el) return; if (!W.el.getBoundingClientRect().width && performance.now() - W.t > 3000) { tutUnfocus(); return; } /* v69 safety: a lesson button that can't be shown never freezes the game */ const m = tutHole(W.el) || 'none', d = $('tutDim'); if (m !== W.m) { W.m = m; d.style.webkitMaskImage = d.style.maskImage = m; } }
 function tutUnfocus() { if (!G.tutWait) return; const W = G.tutWait; G.tutWait = null; if (W.el) W.el.classList.remove('tutPulse'); $('tutDim').classList.add('hidden'); document.body.classList.remove('tutOn'); if (G.state === 'tutwait') { G.state = 'play'; last = performance.now(); } }
 function tutGate(e) { // capture phase: lets through only what the lesson asks for
   const W = G.tutWait; if (!W || G.state !== 'tutwait') return; const t = e.target, x = (e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX);
